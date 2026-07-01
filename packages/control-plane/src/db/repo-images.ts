@@ -38,6 +38,13 @@ export interface RepoImage {
   created_at: number;
 }
 
+/**
+ * D1-backed repo image registry and state machine.
+ *
+ * Completion and failure transitions use conditional updates so the workflow
+ * can handle duplicate callbacks, provider-session token replay, and newer
+ * builds racing older builds without provider-specific branching.
+ */
 export class RepoImageStore {
   constructor(private readonly db: D1Database) {}
 
