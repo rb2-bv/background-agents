@@ -97,8 +97,8 @@ class TestCodexAuthPluginSetup:
         assert data["openai"]["refresh"] == "managed-by-control-plane"
         assert data["openai"]["accountId"] == "acct_xyz"
 
-    async def test_start_opencode_copies_js_plugin(self, tmp_path):
-        """start_opencode() should deploy the precompiled JS plugin into .opencode/plugins."""
+    async def test_start_opencode_configures_oauth_integration(self, tmp_path):
+        """OAuth sessions should deploy the proxy and preserve complete tool output."""
         sup = _make_supervisor()
         sup.workspace_path = tmp_path / "workspace"
         sup.workspace_path.mkdir()
@@ -120,7 +120,7 @@ class TestCodexAuthPluginSetup:
             patch(
                 "sandbox_runtime.entrypoint.asyncio.create_subprocess_exec",
                 AsyncMock(return_value=fake_proc),
-            ),
+            ) as mock_create_subprocess_exec,
             patch(
                 "sandbox_runtime.entrypoint.asyncio.create_task",
                 side_effect=lambda coro: coro.close(),
@@ -143,3 +143,10 @@ class TestCodexAuthPluginSetup:
             plugin_source,
             sup.workspace_path / ".opencode" / "plugins" / "codex-auth-plugin.js",
         )
+        config = json.loads(
+            mock_create_subprocess_exec.call_args.kwargs["env"]["OPENCODE_CONFIG_CONTENT"]
+        )
+        assert config["tool_output"] == {
+            "max_lines": 9_007_199_254_740_991,
+            "max_bytes": 9_007_199_254_740_991,
+        }

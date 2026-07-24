@@ -53,6 +53,7 @@ _LOG_FORWARD_STREAM_LIMIT_BYTES = 1024 * 1024
 # Substituted for a single log line too large to forward intact, so the gap is
 # visible instead of silently dropped.
 _TRUNCATED_LINE_NOTICE = "[log line too large to forward; truncated]"
+_MAX_SAFE_INTEGER = 2**53 - 1
 
 
 def _port_from_env(env_var: str, default: int) -> int:
@@ -1170,6 +1171,13 @@ class SandboxSupervisor:
             "model": f"{provider}/{model}",
             "permission": {"*": {"*": "allow"}},
         }
+
+        if provider == "openai" and os.environ.get("OPENAI_OAUTH_REFRESH_TOKEN"):
+            # ChatGPT should receive complete tool results up to its own context limit.
+            opencode_config["tool_output"] = {
+                "max_lines": _MAX_SAFE_INTEGER,
+                "max_bytes": _MAX_SAFE_INTEGER,
+            }
 
         # Inject MCP servers
         mcp_servers = self._resolve_mcp_servers()
